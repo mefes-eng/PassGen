@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Password Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 50px;
+            background-color: #f0f0f0;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            max-width: 400px;
+            margin: auto;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+        }
+        input[type="number"] {
+            width: 50px;
+        }
+        .output {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Password Generator</h2>
+        <label>Length: <input type="number" id="length" value="12"></label><br><br>
+
+        <label><input type="checkbox" id="uppercase" checked> Include Uppercase</label><br>
+        <label><input type="checkbox" id="lowercase" checked> Include Lowercase</label><br>
+        <label><input type="checkbox" id="digits" checked> Include Digits</label><br>
+        <label><input type="checkbox" id="symbols" checked> Include Symbols</label><br>
+        <label><input type="checkbox" id="exclude_confusing"> Exclude Confusing</label><br><br>
+
+        <button id="generateBtn">Generate Password</button>
+
+        <div class="output" id="passwordOutput"></div>
+    </div>
+</body>
+</html>
+
+<script>
+document.getElementById("generateBtn").addEventListener("click", function() {
+    // 1️⃣ Gather user input values
+    const length = parseInt(document.getElementById("length").value);
+    const uppercase = document.getElementById("uppercase").checked;
+    const lowercase = document.getElementById("lowercase").checked;
+    const digits = document.getElementById("digits").checked;
+    const symbols = document.getElementById("symbols").checked;
+    const exclude_confusing = document.getElementById("exclude_confusing").checked;
+
+    // 2️⃣ Prepare data to send to backend
+    const data = { length, uppercase, lowercase, digits, symbols, exclude_confusing };
+
+    // 3️⃣ Send POST request to Flask backend
+    fetch("/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        // 4️⃣ Display password and strength in the page
+        const output = document.getElementById("passwordOutput");
+        output.innerHTML = `Password: <b>${result.password}</b><br>Strength: <b>${result.strength}</b>`;
+    })
+    .catch(error => console.error("Error:", error));
+});
+</script>
