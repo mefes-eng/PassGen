@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Password Generator</title>
+    <title>Password Generator & Checker</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -13,62 +13,114 @@
             background-color: white;
             padding: 20px;
             border-radius: 10px;
-            max-width: 400px;
+            max-width: 450px;
             margin: auto;
             box-shadow: 0 0 10px rgba(0,0,0,0.2);
         }
-        input[type="number"] {
+        input[type="number"], input[type="password"] {
             width: 50px;
+            margin-left: 5px;
         }
-        .output {
-            margin-top: 20px;
+        .output, .feedback {
+            margin-top: 15px;
             font-weight: bold;
+        }
+        hr {
+            margin: 30px 0;
+        }
+        button {
+            margin-top: 10px;
+            padding: 8px 15px;
+            font-size: 14px;
+        }
+        label {
+            display: block;
+            margin-top: 5px;
+        }
+        #userPassword {
+            width: 100%;
+            padding: 5px;
+        }
+        #showPassword {
+            margin-left: 5px;
         }
     </style>
 </head>
 <body>
     <div class="container">
+        <!-- Password Generator Section -->
         <h2>Password Generator</h2>
         <label>Length: <input type="number" id="length" value="12"></label><br><br>
 
-        <label><input type="checkbox" id="uppercase" checked> Include Uppercase</label><br>
-        <label><input type="checkbox" id="lowercase" checked> Include Lowercase</label><br>
-        <label><input type="checkbox" id="digits" checked> Include Digits</label><br>
-        <label><input type="checkbox" id="symbols" checked> Include Symbols</label><br>
-        <label><input type="checkbox" id="exclude_confusing"> Exclude Confusing</label><br><br>
+        <label><input type="checkbox" id="uppercase" checked> Include Uppercase</label>
+        <label><input type="checkbox" id="lowercase" checked> Include Lowercase</label>
+        <label><input type="checkbox" id="digits" checked> Include Digits</label>
+        <label><input type="checkbox" id="symbols" checked> Include Symbols</label>
+        <label><input type="checkbox" id="exclude_confusing"> Exclude Confusing</label><br>
 
         <button id="generateBtn">Generate Password</button>
-
         <div class="output" id="passwordOutput"></div>
+
+        <hr>
+
+        <!-- Password Checker Section -->
+        <h2 style="font-size: 24px; margin-top: 20px;">Check Your Password</h2>
+        <input type="password" id="userPassword" placeholder="Enter your password">
+        <label><input type="checkbox" id="showPassword"> Show Password</label>
+        <div class="feedback" id="feedback"></div>
     </div>
+
+    <script>
+        // Password Generator
+        const generateBtn = document.getElementById("generateBtn");
+        const passwordOutput = document.getElementById("passwordOutput");
+
+        generateBtn.addEventListener("click", function() {
+            const length = parseInt(document.getElementById("length").value);
+            const uppercase = document.getElementById("uppercase").checked;
+            const lowercase = document.getElementById("lowercase").checked;
+            const digits = document.getElementById("digits").checked;
+            const symbols = document.getElementById("symbols").checked;
+            const exclude_confusing = document.getElementById("exclude_confusing").checked;
+
+            fetch("/generate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({length, uppercase, lowercase, digits, symbols, exclude_confusing})
+            })
+            .then(res => res.json())
+            .then(data => {
+                passwordOutput.innerHTML = `Password: <b>${data.password}</b><br>Strength: <b>${data.strength}</b>`;
+            })
+            .catch(err => console.error("Error:", err));
+        });
+
+        // User Password Checker
+        const passwordInput = document.getElementById("userPassword");
+        const feedback = document.getElementById("feedback");
+        const showPassword = document.getElementById("showPassword");
+
+        passwordInput.addEventListener("input", () => {
+            const value = passwordInput.value;
+            if (!value) { feedback.textContent = ""; return; }
+
+            fetch("/check", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({password: value})
+            })
+            .then(res => res.json())
+            .then(data => {
+                feedback.innerHTML = `Strength: <b>${data.strength}</b><br>` +
+                                     (data.tips.length ? "Tips: " + data.tips.join(", ") : "");
+            })
+            .catch(err => console.error(err));
+        });
+
+        // Show/Hide password
+        showPassword.addEventListener("change", () => {
+            passwordInput.type = showPassword.checked ? "text" : "password";
+        });
+    </script>
 </body>
 </html>
-
-<script>
-document.getElementById("generateBtn").addEventListener("click", function() {
-    // 1️⃣ Gather user input values
-    const length = parseInt(document.getElementById("length").value);
-    const uppercase = document.getElementById("uppercase").checked;
-    const lowercase = document.getElementById("lowercase").checked;
-    const digits = document.getElementById("digits").checked;
-    const symbols = document.getElementById("symbols").checked;
-    const exclude_confusing = document.getElementById("exclude_confusing").checked;
-
-    // 2️⃣ Prepare data to send to backend
-    const data = { length, uppercase, lowercase, digits, symbols, exclude_confusing };
-
-    // 3️⃣ Send POST request to Flask backend
-    fetch("/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
-    })
-    .then(response => response.json())
-    .then(result => {
-        // 4️⃣ Display password and strength in the page
-        const output = document.getElementById("passwordOutput");
-        output.innerHTML = `Password: <b>${result.password}</b><br>Strength: <b>${result.strength}</b>`;
-    })
-    .catch(error => console.error("Error:", error));
-});
-</script>

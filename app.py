@@ -1,4 +1,4 @@
-import random
+import secrets
 import string
 from flask import Flask, render_template, request, jsonify
 
@@ -44,38 +44,85 @@ def generate_password():
         meechars=string.punctuation
         char_sets.append(meechars)
 
-
-    meeword_chars= [random.choice(meechars) for meechars in char_sets]
+    if not char_sets:
+        return jsonify({"error":"Please select at least one character type !!"}),400
+    
 
     all_chars = "".join(char_sets)
-    remaining_length = length - len(meeword_chars)
-    meeword_chars += [random.choice(all_chars) for _ in range(remaining_length)]
+    meeword_chars= [secrets.choice(pool) for pool in char_sets]
+    meeword_chars += [secrets.choice(all_chars) for _ in range(length - len(meeword_chars))]
         
-    random.shuffle(meeword_chars)
+    secrets.SystemRandom().shuffle(meeword_chars)
 
     meeword = "".join(meeword_chars)
-    print("Password: ",meeword)
+    
 
+    score = 0
+    if any(c.islower() for c in meeword) :
+           score +=1
 
-    has_upper=any(c.isupper() for c in meeword)
-    has_lower=any(c.islower() for c in meeword)
-    has_digit=any(c.isdigit() for c in meeword)
-    has_symbol=any(c in string.punctuation for c in meeword)
+    if any(c.isupper() for c in meeword):
+           score +=1
 
-    types_count = has_upper + has_digit + has_lower + has_symbol
+    if any(c.isdigit() for c in meeword):
+           score +=1
 
-    if length < 10 or types_count < 2 :
-        strength = "Weak"
+    if any(c in string.punctuation for c in meeword):
+        score +=1
 
-    elif types_count == 2 :
-        strength = "Medium"
+    if length >= 12:
+        score +=1
 
+    if score <= 2:
+         strength = "Weak"     
+    elif score == 3:
+         strength = "Medium"
     else:
-       strength = "Strong"     
-
+         strength = "Strong"
 
     return jsonify({"password": meeword, "strength" : strength})
 
 
+@app.route("/check", methods = ["POST"])
+def check_password():
+    data = request.get_json()
+    pwd = data.get("password","")
+
+    has_upper=any(c.isupper() for c in pwd)
+    has_lower=any(c.islower() for c in pwd)
+    has_digit=any(c.isdigit() for c in pwd)
+    has_symbol=any(c in string.punctuation for c in pwd)
+
+    tips = []
+    if len (pwd) < 10:
+        tips.append("Use at least 10 characters")
+
+    if not has_upper:
+        tips.append("Add uppercase letters")
+
+    if not has_lower:
+        tips.append("Add lowercase letters")
+
+    if not has_digit:
+        tips.append("Add digits")
+
+    if not has_symbol:
+        tips.append("Add symbols")
+
+    types_count = has_symbol + has_digit + has_lower + has_upper
+
+    if len(pwd)<7 or types_count < 2:
+        strength = "Weak"
+
+    elif 2 <= types_count < 4:
+        strength = "Medium"
+
+    else:
+        strength = "Strong"
+
+    return jsonify({"strength":strength, "tips":tips})
+     
+
+
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True) 
