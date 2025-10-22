@@ -1,0 +1,4 @@
+mwd_logs.txt
+*.db
+__pycache__/
+.env

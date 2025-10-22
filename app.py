@@ -1,6 +1,7 @@
 import secrets
 import string
 from flask import Flask, render_template, request, jsonify
+from datetime import datetime
 
 app = Flask(__name__)
 
@@ -80,7 +81,23 @@ def generate_password():
     else:
          strength = "Strong"
 
+
+    has_upper=any(c.isupper() for c in meeword)
+    has_lower=any(c.islower() for c in meeword)
+    has_digit=any(c.isdigit() for c in meeword)
+    has_symbol=any(c in string.punctuation for c in meeword)
+
+    tstamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+    types_count = has_symbol + has_digit + has_lower + has_upper
+    log_entry = f"{tstamp} | Length: {length} | Strength: {strength} | Types: {types_count}\n"
+
+    with open ("mwd_logs.txt","a") as f:
+        f.write(log_entry)
+    
+
     return jsonify({"password": meeword, "strength" : strength})
+
+    
 
 
 @app.route("/check", methods = ["POST"])
@@ -122,7 +139,12 @@ def check_password():
 
     return jsonify({"strength":strength, "tips":tips})
      
+@app.route("/stats")
+def get_stats():
+    with open ("mwd_logs.txt","r") as f:
+        lines = f.readlines()
 
+    return jsonify ({"entries": lines[-10:]})
 
 if __name__ == "__main__":
     app.run(debug=True) 
