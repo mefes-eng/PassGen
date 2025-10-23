@@ -2,8 +2,28 @@ import secrets
 import string
 from flask import Flask, render_template, request, jsonify
 from datetime import datetime
+import sqlite3
 
 app = Flask(__name__)
+
+def init_db():
+    meecon = sqlite3.connect("meeword_logs.db")
+    m = meecon.cursor()
+    m.execute('''
+              CREATE TABLE IF NOT EXISTS logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TEXT,
+                length INTEGER,
+                strength text,
+                types_count INTEGER,
+                meeword TEXT
+              ) 
+              ''')
+    meecon.commit()
+    meecon.close()
+
+init_db()
+    
 
 @app.route("/")
 def index():
@@ -89,10 +109,21 @@ def generate_password():
 
     tstamp = datetime.now().strftime("%Y-%m-%d %H:%M")
     types_count = has_symbol + has_digit + has_lower + has_upper
-    log_entry = f"{tstamp} | Length: {length} | Strength: {strength} | Types: {types_count}\n"
+
+    meecon = sqlite3.connect("meeword_logs.db")
+    m = meecon.cursor()
+    m.execute(
+    "INSERT INTO logs (timestamp, length, strength, types_count, meeword) VALUES (?, ?, ?, ?, ?)",
+    (tstamp, length, strength, types_count, meeword)
+)
+    meecon.commit()
+    meecon.close()
+
+    '''
+    log_entry = f"{tstamp} | Length: {length} | Strength: {strength} | Types: {types_count}\n
 
     with open ("mwd_logs.txt","a") as f:
-        f.write(log_entry)
+        f.write(log_entry)"'''
     
 
     return jsonify({"password": meeword, "strength" : strength})
@@ -141,10 +172,18 @@ def check_password():
      
 @app.route("/stats")
 def get_stats():
-    with open ("mwd_logs.txt","r") as f:
+    meecon = sqlite3.connect("meeword_logs.db")
+    m = meecon.cursor()
+    m.execute("SELECT timestamp, length, strength, types_count, meeword FROM logs ORDER BY id DESC LIMIT 10")
+    rows =m.fetchall
+    meecon.close()
+
+    entries = [f"{r[0]}     | Length: {r[1]}    | Strength: {r[2]}      | Types: {r[3]}     | Password: {r[4]}" for r in rows]
+    return jsonify({"entries": entries})
+    '''with open ("mwd_logs.txt","r") as f:
         lines = f.readlines()
 
-    return jsonify ({"entries": lines[-10:]})
+    return jsonify ({"entries": lines[-10:]})'''
 
 if __name__ == "__main__":
     app.run(debug=True) 

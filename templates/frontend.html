@@ -44,17 +44,6 @@
         #showPassword {
             margin-left: 5px;
         }
-        /* Added small log viewer styling */
-        #logs {
-            background-color: #f9f9f9;
-            border: 1px solid #ddd;
-            padding: 10px;
-            margin-top: 15px;
-            max-height: 200px;
-            overflow-y: auto;
-            font-size: 13px;
-            white-space: pre-wrap;
-        }
     </style>
 </head>
 <body>
@@ -79,13 +68,6 @@
         <input type="password" id="userPassword" placeholder="Enter your password">
         <label><input type="checkbox" id="showPassword"> Show Password</label>
         <div class="feedback" id="feedback"></div>
-
-        <hr>
-
-        <!-- Log Viewer Section (added) -->
-        <h3>System Logs</h3>
-        <button id="showLogsBtn">Show Logs</button>
-        <div id="logs"></div>
     </div>
 
     <script>
@@ -138,21 +120,6 @@
         // Show/Hide password
         showPassword.addEventListener("change", () => {
             passwordInput.type = showPassword.checked ? "text" : "password";
-        });
-
-        // Fetch Logs (new)
-        const showLogsBtn = document.getElementById("showLogsBtn");
-        const logsDiv = document.getElementById("logs");
-
-        showLogsBtn.addEventListener("click", () => {
-            fetch("/stats")
-                .then(res => res.json())
-                .then(data => {
-                    logsDiv.textContent = data.entries.length
-                        ? data.entries.join("")
-                        : "No logs available yet.";
-                })
-                .catch(err => console.error("Error fetching logs:", err));
         });
     </script>
 </body>
