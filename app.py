@@ -65,6 +65,11 @@ def generate_password():
         meechars=string.punctuation
         char_sets.append(meechars)
 
+
+    if data.get("use_custom_chars") and data.get("custom_chars"):
+        custom_chars = data["custom_chars"]
+        char_sets.append(custom_chars)
+
     if not char_sets:
         return jsonify({"error":"Please select at least one character type !!"}),400
     

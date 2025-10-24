@@ -9,6 +9,7 @@
             margin: 50px;
             background-color: #f0f0f0;
         }
+
         .container {
             background-color: white;
             padding: 20px;
@@ -17,64 +18,131 @@
             margin: auto;
             box-shadow: 0 0 10px rgba(0,0,0,0.2);
         }
+
         input[type="number"], input[type="password"] {
             width: 50px;
             margin-left: 5px;
         }
+
         .output, .feedback {
             margin-top: 15px;
             font-weight: bold;
         }
+
         hr {
             margin: 30px 0;
         }
+
         button {
             margin-top: 10px;
             padding: 8px 15px;
             font-size: 14px;
         }
+
         label {
             display: block;
             margin-top: 5px;
         }
+
         #userPassword {
             width: 100%;
             padding: 5px;
         }
+
         #showPassword {
             margin-left: 5px;
+        }
+
+        /* Copy button inside password box */
+        #passwordBox {
+            position: relative;
+            display: none;
+        }
+
+        #copyBtn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            padding: 4px 8px;
+            font-size: 12px;
+            border: none;
+            background-color: #eee;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        #passwordOutput {
+            background: #f9f9f9;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            font-size: 14px;
+            white-space: pre-wrap;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- Password Generator Section -->
+
+        <!-- =====================
+             PASSWORD GENERATOR
+        ====================== -->
         <h2>Password Generator</h2>
-        <label>Length: <input type="number" id="length" value="12"></label><br><br>
+
+        <label>Length:
+            <input type="number" id="length" value="12">
+        </label>
 
         <label><input type="checkbox" id="uppercase" checked> Include Uppercase</label>
         <label><input type="checkbox" id="lowercase" checked> Include Lowercase</label>
         <label><input type="checkbox" id="digits" checked> Include Digits</label>
         <label><input type="checkbox" id="symbols" checked> Include Symbols</label>
-        <label><input type="checkbox" id="exclude_confusing"> Exclude Confusing</label><br>
+        <label><input type="checkbox" id="exclude_confusing"> Exclude Confusing</label>
+        <label><input type="checkbox" id="use_custom_chars"> Use Custom Characters</label>
+        <input type="text" id="custom_chars" placeholder="Enter custom characters" style="width:100%; display:none;">   
 
         <button id="generateBtn">Generate Password</button>
-        <div class="output" id="passwordOutput"></div>
+
+        <div class="output" id="passwordBox">
+            <pre id="passwordOutput"></pre>
+            <button id="copyBtn">Copy</button>
+        </div>
 
         <hr>
 
-        <!-- Password Checker Section -->
-        <h2 style="font-size: 24px; margin-top: 20px;">Check Your Password</h2>
+        <!-- =====================
+             PASSWORD CHECKER
+        ====================== -->
+        <h2>Check Your Password</h2>
         <input type="password" id="userPassword" placeholder="Enter your password">
         <label><input type="checkbox" id="showPassword"> Show Password</label>
         <div class="feedback" id="feedback"></div>
+
     </div>
 
+    <!-- =====================
+         JAVASCRIPT LOGIC
+    ====================== -->
     <script>
-        // Password Generator
+        // DOM elements
         const generateBtn = document.getElementById("generateBtn");
         const passwordOutput = document.getElementById("passwordOutput");
+        const passwordBox = document.getElementById("passwordBox");
+        const copyBtn = document.getElementById("copyBtn");
+        const passwordInput = document.getElementById("userPassword");
+        const feedback = document.getElementById("feedback");
+        const showPassword = document.getElementById("showPassword");
+        const useCustomCheckbox = document.getElementById("use_custom_chars");
+        const customCharsInput = document.getElementById("custom_chars");
 
+        useCustomCheckbox.addEventListener("change", () => {
+            customCharsInput.style.display = useCustomCheckbox.checked ? "block" : "none";
+        });
+
+        // -----------------------
+        // PASSWORD GENERATOR
+        // -----------------------
         generateBtn.addEventListener("click", function() {
             const length = parseInt(document.getElementById("length").value);
             const uppercase = document.getElementById("uppercase").checked;
@@ -86,20 +154,37 @@
             fetch("/generate", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({length, uppercase, lowercase, digits, symbols, exclude_confusing})
+                body: JSON.stringify({ length, uppercase, lowercase, digits, symbols, exclude_confusing }),
+                body: JSON.stringify({length, uppercase, lowercase, digits, symbols, exclude_confusing,use_custom_chars: useCustomCheckbox.checked,custom_chars: customCharsInput.value})
             })
             .then(res => res.json())
             .then(data => {
-                passwordOutput.innerHTML = `Password: <b>${data.password}</b><br>Strength: <b>${data.strength}</b>`;
+                passwordOutput.textContent = data.password;
+                passwordBox.style.display = "block";
+                copyBtn.style.display = "block";
+                copyBtn.setAttribute("data-password", data.password);
             })
             .catch(err => console.error("Error:", err));
         });
 
-        // User Password Checker
-        const passwordInput = document.getElementById("userPassword");
-        const feedback = document.getElementById("feedback");
-        const showPassword = document.getElementById("showPassword");
+        // -----------------------
+        // COPY TO CLIPBOARD
+        // -----------------------
+        copyBtn.addEventListener("click", () => {
+            const password = copyBtn.getAttribute("data-password");
+            navigator.clipboard.writeText(password).then(() => {
+                copyBtn.textContent = "Copied!";
+                copyBtn.style.backgroundColor = "#cce5cc";
+                setTimeout(() => {
+                    copyBtn.textContent = "Copy";
+                    copyBtn.style.backgroundColor = "#eee";
+                }, 1500);
+            });
+        });
 
+        // -----------------------
+        // PASSWORD CHECKER
+        // -----------------------
         passwordInput.addEventListener("input", () => {
             const value = passwordInput.value;
             if (!value) { feedback.textContent = ""; return; }
@@ -107,17 +192,21 @@
             fetch("/check", {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({password: value})
+                body: JSON.stringify({ password: value })
             })
             .then(res => res.json())
             .then(data => {
-                feedback.innerHTML = `Strength: <b>${data.strength}</b><br>` +
-                                     (data.tips.length ? "Tips: " + data.tips.join(", ") : "");
+                feedback.innerHTML = `
+                    Strength: <b>${data.strength}</b><br>
+                    ${data.tips.length ? "Tips: " + data.tips.join(", ") : ""}
+                `;
             })
             .catch(err => console.error(err));
         });
 
-        // Show/Hide password
+        // -----------------------
+        // SHOW / HIDE PASSWORD
+        // -----------------------
         showPassword.addEventListener("change", () => {
             passwordInput.type = showPassword.checked ? "text" : "password";
         });
