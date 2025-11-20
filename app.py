@@ -3,8 +3,11 @@ import string
 from flask import Flask, render_template, request, jsonify
 from datetime import datetime
 import sqlite3
+import math
 
 app = Flask(__name__)
+
+
 
 def init_db():
     meecon = sqlite3.connect("meeword_logs.db")
@@ -17,6 +20,7 @@ def init_db():
                 strength text,
                 types_count INTEGER,
                 meeword TEXT
+                entropy REAL
               ) 
               ''')
     meecon.commit()
@@ -75,6 +79,7 @@ def generate_password():
     
 
     all_chars = "".join(char_sets)
+    entropy = round(math.log2(len(all_chars)**length),2)
     meeword_chars= [secrets.choice(pool) for pool in char_sets]
     meeword_chars += [secrets.choice(all_chars) for _ in range(length - len(meeword_chars))]
         
@@ -118,8 +123,8 @@ def generate_password():
     meecon = sqlite3.connect("meeword_logs.db")
     m = meecon.cursor()
     m.execute(
-    "INSERT INTO logs (timestamp, length, strength, types_count, meeword) VALUES (?, ?, ?, ?, ?)",
-    (tstamp, length, strength, types_count, meeword)
+    "INSERT INTO logs (timestamp, length, strength, types_count, meeword,entropy) VALUES (?, ?, ?, ?, ?, ?)",
+    (tstamp, length, strength, types_count, meeword, entropy)
 )
     meecon.commit()
     meecon.close()
@@ -131,7 +136,7 @@ def generate_password():
         f.write(log_entry)"'''
     
 
-    return jsonify({"password": meeword, "strength" : strength})
+    return jsonify({"password": meeword, "strength" : strength, "entropy":entropy})
 
     
 
